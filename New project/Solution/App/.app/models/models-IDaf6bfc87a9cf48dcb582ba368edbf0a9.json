@@ -1,0 +1,94 @@
+{
+  "id": "ID414ea980d3ee4eddbb34713012ce218f",
+  "dateCreated": "2026-04-06T06:35:23.259Z",
+  "dateLastOpened": "2026-04-06T06:35:23.259Z",
+  "type": "app",
+  "iconUrl": "assets/svg/expressions-editor/app-variable.svg",
+  "idCounter": 1005,
+  "ownerFqn": "",
+  "ownerId": "",
+  "createdByFqn": "",
+  "createdById": "",
+  "systemName": "IDaf6bfc87a9cf48dcb582ba368edbf0a9",
+  "categorySystemName": "j-category-apps-organization",
+  "tenantId": "glapgxwtwd",
+  "buildVersion": "2026.4.1-6.55.2-s190.e02c44ef2",
+  "modelVersion": 7,
+  "currentModelVersion": 1,
+  "dllVersion": 0,
+  "modelTypesVersion": 0,
+  "ownerDisplayName": "",
+  "rootReferences": {
+    "ID00e9e4d5520e4b16b933aa829c2d3965": {
+      "id": "ID1003",
+      "instances": [
+        {
+          "id": "ID1004",
+          "instanceJPath": "$.defaultForm",
+          "titleIconUrl": "assets/svg/form.svg",
+          "titlePropertyName": "title",
+          "subTitles": []
+        }
+      ],
+      "titleIconUrl": "assets/svg/form.svg",
+      "titlePropertyName": "title",
+      "type": "form"
+    }
+  },
+  "title": "App",
+  "description": "",
+  "allModelErrors": {},
+  "valueBindingMetadata": {},
+  "defaultForm": {
+    "id": "ID1005",
+    "rootType": "form",
+    "rootSystemName": "ID00e9e4d5520e4b16b933aa829c2d3965",
+    "instanceJPath": "$.rootReferences.ID00e9e4d5520e4b16b933aa829c2d3965.instances[?(@.id==\"ID1004\")]",
+    "objectJPath": "$",
+    "itemType": "form"
+  },
+  "appFields": [],
+  "expressionLanguage": "VB",
+  "appIcon": {
+    "id": "ID1002"
+  },
+  "cacheKey": "1775457323259",
+  "isPublic": false,
+  "theme": {
+    "id": "robottorney",
+    "type": "OOB"
+  },
+  "isExpressionEnabled": false,
+  "isSharedWithinTenant": false,
+  "collaborators": [],
+  "latestPublishedVersion": null,
+  "lastPublishedDate": null,
+  "latestPublishType": null,
+  "tenants": [],
+  "isLazyHydrationEnabled": true,
+  "datatableDeserializationDefaultingToObject": true,
+  "isAppPublic": false,
+  "appUsageType": 0,
+  "migrationFlagVersions": {
+    "vb_assembly_regen_flag_version": 1,
+    "vb_force_lazy_hydration_flag_version": 1,
+    "uts_enabled": 1
+  },
+  "isUnifiedProject": true,
+  "unifiedProjectId": "f8435aa3-fa6d-4d60-b1f5-c0c8d0d886fd",
+  "isLinkedToSolution": false,
+  "unifiedBuildSolutionId": "",
+  "unifiedProjectContext": {
+    "expressionLanguage": "VB",
+    "userPrompt": "",
+    "systemPrompt": "",
+    "schemas": "{}",
+    "escalationDesctiption": ""
+  },
+  "appMetadata": {},
+  "appSettings": {},
+  "documentReferences": {},
+  "unifiedProjectType": "Process",
+  "isSWFileSystemEnabled": true,
+  "runtimeLanguage": "en"
+}

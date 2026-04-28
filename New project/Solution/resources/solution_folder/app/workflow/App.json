@@ -1,0 +1,44 @@
+{
+  "docVersion": "1.0.0",
+  "resource": {
+    "name": "App",
+    "kind": "app",
+    "type": "workflow",
+    "apiVersion": "apps.uipath.com/v1",
+    "projectKey": "ba646c73-9efc-433b-828b-e40bf421d531",
+    "isOverridable": true,
+    "dependencies": [
+      {
+        "name": "App",
+        "kind": "appVersion"
+      },
+      {
+        "name": "App",
+        "kind": "process"
+      }
+    ],
+    "runtimeDependencies": [],
+    "files": [],
+    "folders": [
+      {
+        "fullyQualifiedName": "solution_folder"
+      }
+    ],
+    "spec": {
+      "name": "App",
+      "description": null,
+      "type": "workflow",
+      "version": null,
+      "appSystemName": null,
+      "appVersionRef": {
+        "key": "fb767f9a-2de2-4cdc-8e30-e05bbf575618"
+      },
+      "codeBehindProcess": {
+        "key": "5ab8340e-b176-4c7f-a71d-59156bc43d1f"
+      },
+      "actionSchema": null
+    },
+    "locks": [],
+    "key": "dc47a46c-503d-48af-95ab-77ac2a3ffa88"
+  }
+}

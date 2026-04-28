@@ -1,0 +1,10 @@
+{
+  "name": "drivecare-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd drivecare-react && npm run dev",
+    "build": "cd drivecare-react && npm run build",
+    "install": "cd drivecare-react && npm install"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "SolutionId": "c01d3425-62b2-4c7a-a9bc-b93d2325e6ad",
+  "Projects": [
+    {
+      "Id": "ba646c73-9efc-433b-828b-e40bf421d531",
+      "Type": "WebApp",
+      "ProjectRelativePath": "App/project.uiproj"
+    }
+  ]
+}
