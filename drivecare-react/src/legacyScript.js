@@ -2031,21 +2031,37 @@ function doCancel(){
 function startSvcCompletePoller(){
   clearInterval(S._svcPollTimer);
   S._svcPollTimer=setInterval(()=>{
-    if(!S.activeMechId)return;
-    const rec=DB.get('svcComplete_mech_'+S.activeMechId);
-    if(rec && rec.jobId===S.activeJobId){
-      if(rec.complete && !S.svcCompletedByMech){
-        S.svcCompletedByMech=true;
-        if(S.payTiming==='after'&&!S.paymentDone){
-          renderPostPayPanel();
-          toast('🔧 Service complete! Please pay to confirm.');
-        } else {
-          toast('🔧 Mechanic has completed the service! You can now confirm.');
+    if(!S.activeJobId) return;
+
+    // 1. Try Supabase
+    if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
+      window.supabase.from('service_requests').select('*').eq('id', S.activeJobId).single().then(({ data, error }) => {
+        if (data) {
+          _handlePolledRecord(data);
         }
-      }
-      renderUserOtpState(rec);
+      });
+    } else {
+      // 2. Fallback to local
+      if(!S.activeMechId) return;
+      const rec=DB.get('svcComplete_mech_'+S.activeMechId);
+      if (rec && rec.jobId === S.activeJobId) _handlePolledRecord(rec);
     }
-  },1000);
+  },2000); // Polling every 2s to reduce load
+}
+
+function _handlePolledRecord(rec) {
+  if (rec.status === 'completed' || rec.complete) {
+    if (!S.svcCompletedByMech) {
+      S.svcCompletedByMech = true;
+      if (S.payTiming === 'after' && !S.paymentDone) {
+        renderPostPayPanel();
+        toast('🔧 Service complete! Please pay to confirm.');
+      } else {
+        toast('🔧 Mechanic has completed the service! You can now confirm.');
+      }
+    }
+  }
+  renderUserOtpState(rec);
 }
 
 function renderUserOtpState(rec = null) {
@@ -2126,6 +2142,14 @@ function revealFinalOtp() {
   if (rec && rec.jobId === S.activeJobId) {
     rec.otp2Revealed = true;
     DB.set('svcComplete_mech_' + S.activeMechId, rec);
+    
+    // ── Sync to Supabase ──
+    if (window.supabase && typeof window.supabase.from === 'function') {
+      window.supabase.from('service_requests')
+        .update({ otp2Revealed: true })
+        .eq('id', S.activeJobId);
+    }
+
     renderUserOtpState(rec);
   }
 }
@@ -2526,6 +2550,14 @@ function mechVerifyOtp1() {
   rec.otp1Verified = true;
   rec.otpRetries = 0; 
   DB.set('svcComplete_mech_' + mid, rec);
+
+  // ── Sync to Supabase ──
+  if (window.supabase && typeof window.supabase.from === 'function') {
+    window.supabase.from('service_requests')
+      .update({ otp1Verified: true, status: 'in_progress' })
+      .eq('id', rec.jobId || S.activeJob?.jobId);
+  }
+
   toast('✅ Work Started');
   renderMechSvcComplete();
 }
@@ -2556,6 +2588,13 @@ function mechVerifyOtp2() {
   rec.otpRetries = 0;
   DB.set('svcComplete_mech_' + mid, rec);
   
+  // ── Sync to Supabase ──
+  if (window.supabase && typeof window.supabase.from === 'function') {
+    window.supabase.from('service_requests')
+      .update({ complete: true, status: 'completed' })
+      .eq('id', rec.jobId || S.activeJob?.jobId);
+  }
+
   S.svcCompletedByMech = true;
   if(S.user&&S.user.history){const h=S.user.history.find(x=>x.jobId===S.activeJob.jobId);if(h)h.mechComplete=true;}
   saveUser();
