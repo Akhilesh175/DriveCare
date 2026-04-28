@@ -1630,9 +1630,8 @@ function proceedToTracking(paymentDone){
   if(paymentDone){
     creditMechanic(S.mech.id,S.service,S.serviceIcon,S.vehicle,(S.user.name||'User'),S.servicePrice,Math.round(parseInt(S.servicePrice.replace('₹',''))*(1-S.commRate)));
   }
-  // Generate OTPs
+  // Generate OTP 1 (OTP 2 is generated later when work starts)
   const otp1 = Math.floor(1000 + Math.random() * 9000).toString();
-  const otp2 = Math.floor(1000 + Math.random() * 9000).toString();
   const otpExpiry = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
 
   // Ensure the shared flag exists for this mechanic (mechAccept also writes this;
@@ -1645,7 +1644,7 @@ function proceedToTracking(paymentDone){
       mechId:S.mech.id, 
       ts:Date.now(),
       otp1,
-      otp2,
+      otp2: null, // Generated later
       otp1Verified: false,
       otp2Revealed: false,
       otpRetries: 0,
@@ -1670,7 +1669,7 @@ function proceedToTracking(paymentDone){
     status: 'pending',
     targetMechId: S.mech.id,
     otp1,
-    otp2,
+    otp2: null,
     otpExpiry,
     ts: Date.now()
   };
@@ -2046,7 +2045,7 @@ function startSvcCompletePoller(){
       const rec=DB.get('svcComplete_mech_'+S.activeMechId);
       if (rec && rec.jobId === S.activeJobId) _handlePolledRecord(rec);
     }
-  },2000); // Polling every 2s to reduce load
+  },1000); // Polling every 1s for immediate feedback
 }
 
 function _handlePolledRecord(rec) {
@@ -2547,14 +2546,18 @@ function mechVerifyOtp1() {
     toast('❌ Incorrect OTP'); return;
   }
   
+  // Generate Completion OTP 2 now that work has started
+  const otp2 = Math.floor(1000 + Math.random() * 9000).toString();
+  
   rec.otp1Verified = true;
+  rec.otp2 = otp2;
   rec.otpRetries = 0; 
   DB.set('svcComplete_mech_' + mid, rec);
 
   // ── Sync to Supabase ──
   if (window.supabase && typeof window.supabase.from === 'function') {
     window.supabase.from('service_requests')
-      .update({ otp1Verified: true, status: 'in_progress' })
+      .update({ otp1Verified: true, otp2: otp2, status: 'in_progress' })
       .eq('id', rec.jobId || S.activeJob?.jobId);
   }
 
