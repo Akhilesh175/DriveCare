@@ -1615,6 +1615,28 @@ function proceedToTracking(paymentDone){
       otpExpiry
     });
   }
+
+  // ── BROADCAST: Add to global active_requests so it shows on Mechanic Portal ──
+  const liveReqs = DB.get('active_requests') || [];
+  // Build a request object compatible with renderMechRequests
+  const newLiveReq = {
+    id: jobId,
+    brand: VS.selectedBrand,
+    service: S.service,
+    icon: S.serviceIcon,
+    category: VS.selectedCategory,
+    model: VS.selectedModel,
+    user: S.user.name || 'User',
+    phone: S.user.phone,
+    dist: '1.2 km', // simulated
+    eta: '8', // simulated
+    price: S.servicePrice,
+    vehNum: VS.vehicleNumber || '',
+    ts: Date.now(),
+    targetMechId: S.mech.id // Keep it targeted if the user selected a specific mechanic
+  };
+  liveReqs.unshift(newLiveReq);
+  DB.set('active_requests', liveReqs.slice(0, 50)); // Keep last 50
   S.svcCompletedByMech=false;
   S.etaVal=parseInt(S.mech.eta)||8;
   saveUser();
@@ -2124,6 +2146,19 @@ function refreshMechDash(){
   const rats=(S.user.history||[]).filter(h=>h.rating).map(h=>h.rating);const avg=rats.length?(rats.reduce((a,b)=>a+b,0)/rats.length).toFixed(1):'—';
   const e3=document.getElementById('mechRatingDisp');if(e3)e3.textContent=avg;
   renderMechRequests();
+
+  // ── REAL-TIME POLLING: Refresh requests every 5 seconds if on home screen ──
+  if (!S._mechDashPoller) {
+    S._mechDashPoller = setInterval(() => {
+      const activeScreen = document.querySelector('.screen.active');
+      if (activeScreen && activeScreen.id === 'mechHome' && S.role === 'mechanic') {
+        renderMechRequests();
+      } else {
+        clearInterval(S._mechDashPoller);
+        S._mechDashPoller = null;
+      }
+    }, 5000);
+  }
 }
 function renderMechRequests(){
   const list=document.getElementById('mechReqList');if(!list)return;
@@ -2132,8 +2167,15 @@ function renderMechRequests(){
     return;
   }
 
+  // Fetch LIVE requests from DB (broadcast + targeted)
+  const liveReqs = (DB.get('active_requests') || []).filter(r => {
+    // Only show if not accepted yet (we'll remove it on accept)
+    // and if it's either broadcast OR targeted specifically to this mechanic
+    return !r.accepted && (!r.targetMechId || r.targetMechId === S.user.mechId);
+  });
+
   // All possible simulated requests, each tagged with a brand id
-  const ALL_REQS=[
+  const MOCK_REQS=[
     {id:'R-T1', brand:'tata',     service:'Puncture repair',  icon:'🔩', category:'Car',    model:'Nexon',       user:'Arjun Sharma',  dist:'0.9 km', eta:'6',  price:'₹199', vehNum:'MH 12 AB 1234'},
     {id:'R-T2', brand:'tata',     service:'Battery dead',     icon:'🔋', category:'SUV',    model:'Harrier',     user:'Sunita Rao',    dist:'1.8 km', eta:'12', price:'₹349'},
     {id:'R-T3', brand:'tata',     service:'Engine issue',     icon:'🔧', category:'Truck',  model:'Prima',       user:'Baldev Singh',  dist:'3.2 km', eta:'21', price:'₹799', vehNum:'MH 14 XY 9876'},
@@ -2153,6 +2195,8 @@ function renderMechRequests(){
     {id:'R-T4', brand:'tvs',      service:'Puncture repair',  icon:'🔩', category:'Scooter',model:'Jupiter',     user:'Sushma Reddy',  dist:'1.7 km', eta:'12', price:'₹149'},
     {id:'R-OT1',brand:'other',    service:'Engine issue',     icon:'🔧', category:'Truck',  model:'Other Truck', user:'Harpal Singh',  dist:'3.0 km', eta:'20', price:'₹799'},
   ];
+
+  const ALL_REQS = [...liveReqs, ...MOCK_REQS];
 
   // Filter to mechanic's preferred brands (fallback: show all)
   const prefs=S.user.preferredBrands||[];
@@ -2246,6 +2290,11 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId){
   S.svcCompletedByMech=false;
   const mechId=S.user.mechId||'unknown';
   DB.set('svcComplete_mech_'+mechId,{complete:false,jobId,mechId,service,vehicle,userName,price,brandId,ts:Date.now()});
+  
+  // ── Remove from live requests so others don't see it ──
+  const liveReqs = (DB.get('active_requests') || []).filter(r => r.id !== reqId);
+  DB.set('active_requests', liveReqs);
+
   saveUser();if(typeof adminAddLog==='function')adminAddLog('service',`⚡ ${S.user?S.user.name:'Mechanic'} accepted: ${service} for ${userName}`);refreshMechDash();toast('✅ Accepted! Go to Service tab to mark complete.');
   // Save session so page refresh restores the mechSvcComplete screen
   saveSession('mechSvcComplete');
