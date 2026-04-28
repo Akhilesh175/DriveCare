@@ -2171,11 +2171,19 @@ function finishJob(){
   stopTracking();
   // Clean up shared flag now that job is fully done
   if(S.activeMechId)DB.del('svcComplete_mech_'+S.activeMechId);
-  document.getElementById('ratingMech').textContent=S.mech.name;S.selectedRating=0;renderStars(0);
-  document.getElementById('starLbl').textContent='Tap a star to rate';document.getElementById('starLbl').style.color='var(--tx3)';
-  document.getElementById('feedbackTa').value='';
   S.activeJobId=null;S.activeMechId=null;S.svcCompletedByMech=false;S.paymentDone=false;S.payTiming='now';
   showScreen('rating');
+  
+  setTimeout(() => {
+    const rm = document.getElementById('ratingMech');
+    if(rm && S.mech) rm.textContent=S.mech.name;
+    S.selectedRating=0;
+    renderStars(0);
+    const sl = document.getElementById('starLbl');
+    if(sl) { sl.textContent='Tap a star to rate'; sl.style.color='var(--tx3)'; }
+    const fta = document.getElementById('feedbackTa');
+    if(fta) fta.value='';
+  }, 150);
 }
 
 // ── RATING ──
