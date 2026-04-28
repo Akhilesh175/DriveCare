@@ -2032,20 +2032,24 @@ function startSvcCompletePoller(){
   S._svcPollTimer=setInterval(()=>{
     if(!S.activeJobId) return;
 
-    // 1. Try Supabase
+    // 1. ALWAYS check localStorage first (guaranteed to work on same device)
+    if(S.activeMechId){
+      const localRec=DB.get('svcComplete_mech_'+S.activeMechId);
+      if(localRec && (localRec.jobId===S.activeJobId || localRec.id===S.activeJobId)){
+        _handlePolledRecord(localRec);
+        return; // Local record found and handled
+      }
+    }
+
+    // 2. Also try Supabase for cross-device sync (if local record wasn't found)
     if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
       window.supabase.from('service_requests').select('*').eq('id', S.activeJobId).single().then(({ data, error }) => {
-        if (data) {
+        if (data && !error) {
           _handlePolledRecord(data);
         }
       });
-    } else {
-      // 2. Fallback to local
-      if(!S.activeMechId) return;
-      const rec=DB.get('svcComplete_mech_'+S.activeMechId);
-      if (rec && rec.jobId === S.activeJobId) _handlePolledRecord(rec);
     }
-  },1000); // Polling every 1s for immediate feedback
+  },1000);
 }
 
 function _handlePolledRecord(rec) {
