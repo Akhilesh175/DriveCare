@@ -1632,6 +1632,9 @@ function proceedToTracking(paymentDone){
     vehNum: VS.vehicleNumber || '',
     status: 'pending',
     targetMechId: S.mech.id,
+    otp1,
+    otp2,
+    otpExpiry,
     ts: Date.now()
   };
 
@@ -2268,8 +2271,8 @@ function _renderRequestsInternal(liveReqs) {
       const badgeText=isFirstCard?'NEW':'PENDING';
       
       const vehicle=`${r.category} · ${r.model}` + (r.vehNum ? ` (${r.vehNum})` : '');
-      const safeArgs=[r.id,r.service,r.icon,vehicle,r.user,r.price,r.brand]
-        .map(v=>`'${String(v).replace(/'/g,"\\'")}'`).join(',');
+      const safeArgs=[r.id,r.service,r.icon,vehicle,r.user,r.price,r.brand,r.otp1,r.otp2,r.otpExpiry]
+        .map(v=>`'${String(v||'').replace(/'/g,"\\'")}'`).join(',');
 
       html+=`
         <div class="req-card ${isFirstCard?'new-req':''}" id="req-${r.id}">
@@ -2308,7 +2311,7 @@ function _renderRequestsInternal(liveReqs) {
 
   list.innerHTML=html;
 }
-function mechAccept(reqId,service,icon,vehicle,userName,price,brandId){
+function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,otpExpiry){
   const card=document.getElementById('req-'+reqId);if(card){card.style.opacity='.5';card.style.pointerEvents='none';}
   const total=parseInt(price.replace('₹',''));const net=Math.round(total*(1-S.commRate));
   const jobId='JOB-'+Date.now();
@@ -2321,7 +2324,23 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId){
   S.activeJob={jobId,service,serviceIcon:icon,vehicle,userName,price,net,reqId,brandId,brandName:bObj.name,brandLogo:bObj.logo};
   S.svcCompletedByMech=false;
   const mechId=S.user.mechId||'unknown';
-  DB.set('svcComplete_mech_'+mechId,{complete:false,jobId,mechId,service,vehicle,userName,price,brandId,ts:Date.now()});
+  DB.set('svcComplete_mech_'+mechId,{
+    complete:false,
+    jobId,
+    mechId,
+    service,
+    vehicle,
+    userName,
+    price,
+    brandId,
+    otp1,
+    otp2,
+    otp1Verified: false,
+    otp2Revealed: false,
+    otpRetries: 0,
+    otpExpiry: parseInt(otpExpiry)||0,
+    ts:Date.now()
+  });
   
   // ── Mark as accepted in Supabase ──
   if (window.supabase && typeof window.supabase.from === 'function') {
@@ -2444,24 +2463,32 @@ function mechVerifyOtp1() {
   const input = document.getElementById('mechOtp1Input').value.trim();
   if(!input) { toast('⚠️ Please enter OTP'); return; }
   
-  const rec = DB.get('svcComplete_mech_' + (S.user?.mechId || S.activeMechId));
-  if(!rec) return;
+  const mid = S.user?.mechId || S.activeMechId;
+  const rec = DB.get('svcComplete_mech_' + mid);
+  if(!rec) {
+    console.error('No service record found for mechanic:', mid);
+    toast('❌ Error: Job record not found. Try refreshing.');
+    return;
+  }
 
-  if (Date.now() > rec.otpExpiry) {
+  // Debug logging
+  console.log('Verifying OTP 1:', { entered: input, expected: rec.otp1, match: input === String(rec.otp1) });
+
+  if (rec.otpExpiry && Date.now() > rec.otpExpiry) {
     toast('❌ OTP Expired'); return;
   }
   if (rec.otpRetries >= 5) {
     toast('❌ Too many incorrect attempts. Job locked.'); return;
   }
-  if (input !== rec.otp1) {
-    rec.otpRetries++;
-    DB.set('svcComplete_mech_' + (S.user?.mechId || S.activeMechId), rec);
+  if (String(input).trim() !== String(rec.otp1 || '').trim()) {
+    rec.otpRetries = (rec.otpRetries || 0) + 1;
+    DB.set('svcComplete_mech_' + mid, rec);
     toast('❌ Incorrect OTP'); return;
   }
   
   rec.otp1Verified = true;
-  rec.otpRetries = 0; // reset retries
-  DB.set('svcComplete_mech_' + (S.user?.mechId || S.activeMechId), rec);
+  rec.otpRetries = 0; 
+  DB.set('svcComplete_mech_' + mid, rec);
   toast('✅ Work Started');
   renderMechSvcComplete();
 }
@@ -2470,24 +2497,27 @@ function mechVerifyOtp2() {
   const input = document.getElementById('mechOtp2Input').value.trim();
   if(!input) { toast('⚠️ Please enter OTP'); return; }
   
-  const rec = DB.get('svcComplete_mech_' + (S.user?.mechId || S.activeMechId));
+  const mid = S.user?.mechId || S.activeMechId;
+  const rec = DB.get('svcComplete_mech_' + mid);
   if(!rec) return;
 
-  if (Date.now() > rec.otpExpiry) {
+  console.log('Verifying OTP 2:', { entered: input, expected: rec.otp2, match: input === String(rec.otp2) });
+
+  if (rec.otpExpiry && Date.now() > rec.otpExpiry) {
     toast('❌ OTP Expired'); return;
   }
   if (rec.otpRetries >= 5) {
     toast('❌ Too many incorrect attempts. Job locked.'); return;
   }
-  if (input !== rec.otp2) {
-    rec.otpRetries++;
-    DB.set('svcComplete_mech_' + (S.user?.mechId || S.activeMechId), rec);
+  if (String(input).trim() !== String(rec.otp2 || '').trim()) {
+    rec.otpRetries = (rec.otpRetries || 0) + 1;
+    DB.set('svcComplete_mech_' + mid, rec);
     toast('❌ Incorrect OTP'); return;
   }
   
   rec.complete = true;
   rec.otpRetries = 0;
-  DB.set('svcComplete_mech_' + (S.user?.mechId || S.activeMechId), rec);
+  DB.set('svcComplete_mech_' + mid, rec);
   
   S.svcCompletedByMech = true;
   if(S.user&&S.user.history){const h=S.user.history.find(x=>x.jobId===S.activeJob.jobId);if(h)h.mechComplete=true;}
