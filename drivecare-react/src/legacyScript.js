@@ -2388,8 +2388,13 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,
   S.activeJob={jobId,service,serviceIcon:icon,vehicle,userName,price,net,reqId,brandId,brandName:bObj.name,brandLogo:bObj.logo};
   S.svcCompletedByMech=false;
   const mechId=S.user.mechId||'unknown';
-  DB.set('svcComplete_mech_'+mechId,{
-    complete:false,
+  // ── MERGE with existing record to preserve user-generated OTPs ──
+  // The user writes otp1/otp2/otpExpiry into this key in proceedToTracking.
+  // Overwriting those values would break OTP verification.
+  const existingRec = DB.get('svcComplete_mech_'+mechId) || {};
+  DB.set('svcComplete_mech_'+mechId, {
+    ...existingRec,
+    complete: false,
     jobId,
     mechId,
     service,
@@ -2397,13 +2402,13 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,
     userName,
     price,
     brandId,
-    otp1,
-    otp2,
+    otp1: existingRec.otp1 || otp1 || null,
+    otp2: existingRec.otp2 || otp2 || null,
     otp1Verified: false,
     otp2Revealed: false,
     otpRetries: 0,
-    otpExpiry: parseInt(otpExpiry)||0,
-    ts:Date.now()
+    otpExpiry: existingRec.otpExpiry || parseInt(otpExpiry) || 0,
+    ts: Date.now()
   });
   
   // ── Mark as accepted in Supabase ──
