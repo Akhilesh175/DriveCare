@@ -2374,7 +2374,7 @@ function _renderRequestsInternal(liveReqs) {
 function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,otpExpiry){
   const card=document.getElementById('req-'+reqId);if(card){card.style.opacity='.5';card.style.pointerEvents='none';}
   const total=parseInt(price.replace('₹',''));const net=Math.round(total*(1-S.commRate));
-  const jobId='JOB-'+Date.now();
+  const jobId = reqId; // Use the ID from the request
   const bObj=VS_BRANDS.find(b=>b.id===brandId)||{logo:'🚗',name:brandId||'Unknown'};
   if(!S.user.history)S.user.history=[];
   S.user.history.unshift({jobId,service,serviceIcon:icon,vehicle,userName,price,netEarned:net,brandId,brandName:bObj.name,brandLogo:bObj.logo,status:'accepted',mechComplete:false,date:Date.now()});
