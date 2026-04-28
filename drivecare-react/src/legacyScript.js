@@ -594,8 +594,8 @@ function getPickedBrands(){
   });
 }
 
-function genMechId(){const users=DB.get('users')||{};return 'DC-M-'+String(Object.values(users).filter(u=>u.role==='mechanic').length+1).padStart(3,'0');}
-function genUserId(){const users=DB.get('users')||{};return 'DC-U-'+String(Object.values(users).filter(u=>u.role==='user').length+1).padStart(3,'0');}
+function genMechId(){return 'DC-M-'+Date.now();}
+function genUserId(){return 'DC-U-'+Date.now();}
 
 function sendLoginOtp(){
   const el=document.getElementById('loginPhone'),err=document.getElementById('loginPhErr');
@@ -612,9 +612,38 @@ function verifyLoginOtp(){
   const entered=getOtp('lo'),err=document.getElementById('loginOtpErr');
   if(entered!==S.pendingOtp){err.style.display='block';clearOtp('lo');document.getElementById('lo0').focus();return;}
   err.style.display='none';
-  const u=(DB.get('users')||{})[S.pendingPhone];if(!u){toast('❌ User not found');return;}
-  S.user=u;S.role=u.role||'user';DB.set('currentUser',{phone:u.phone});DB.set('user',S.user);
-  applyUser();if(typeof adminAddLog==='function')adminAddLog('login',`🔑 ${S.role==='mechanic'?'Mechanic':'User'} login: ${u.name} (${u.phone})`);toast('👋 Welcome back, '+u.name+'!');showScreen(S.role==='mechanic'?'mechHome':'home');if(S.role==='mechanic')refreshMechDash();
+  
+  const finishLogin = (u) => {
+    if(!u){toast('❌ User not found');return;}
+    S.user=u;S.role=u.role||'user';DB.set('currentUser',{phone:u.phone});DB.set('user',S.user);
+    // Also update local users cache
+    const localUsers = DB.get('users') || {};
+    localUsers[u.phone] = u;
+    DB.set('users', localUsers);
+
+    applyUser();
+    if(typeof adminAddLog==='function')adminAddLog('login',`🔑 ${S.role==='mechanic'?'Mechanic':'User'} login: ${u.name} (${u.phone})`);
+    toast('👋 Welcome back, '+u.name+'!');
+    showScreen(S.role==='mechanic'?'mechHome':'home');
+    if(S.role==='mechanic')refreshMechDash();
+  };
+
+  // 1. Try Supabase first
+  if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
+    window.supabase.from('profiles').select('*').eq('phone', S.pendingPhone).single().then(({ data, error }) => {
+      if (data) {
+        finishLogin(data);
+      } else {
+        // Fallback to local
+        const u=(DB.get('users')||{})[S.pendingPhone];
+        finishLogin(u);
+      }
+    });
+  } else {
+    // 2. Fallback to local
+    const u=(DB.get('users')||{})[S.pendingPhone];
+    finishLogin(u);
+  }
 }
 function resendOtp(){S.pendingOtp=genOtp();document.getElementById('loginOtpMsg').textContent='📱 New OTP: '+S.pendingOtp;toast('📱 OTP resent!');clearOtp('lo');document.getElementById('lo0').focus();}
 
@@ -666,6 +695,14 @@ function verifyRegOtp(){
     u.grossEarnings=0;u.paidOut=0;u.payouts=[];u.online=true;
   } else {u.userId=genUserId();}
   const users=DB.get('users')||{};users[S.pendingPhone]=u;DB.set('users',users);
+  
+  // ── Sync Profile to Supabase ──
+  if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
+    window.supabase.from('profiles').insert([u]).then(({ error }) => {
+      if (error) console.error('Supabase profile save error:', error);
+    });
+  }
+
   S.user=u;S.role=role;
   DB.del('session'); // Clear old session on new registration
   DB.set('currentUser',{phone:u.phone});DB.set('user',S.user);
