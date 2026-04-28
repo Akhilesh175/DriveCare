@@ -2075,7 +2075,7 @@ function renderUserOtpState(rec = null) {
     rec = DB.get('svcComplete_mech_' + S.activeMechId);
   }
   
-  if (!rec || rec.jobId !== S.activeJobId) return;
+  if (!rec || (rec.jobId !== S.activeJobId && rec.id !== S.activeJobId)) return;
 
   const payOk = S.paymentDone || (S.payTiming === 'now');
 
