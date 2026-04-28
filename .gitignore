@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+drivecare-react/node_modules/
+
+# Build output
+dist/
+build/
+drivecare-react/dist/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vite
+drivecare-react/.vite/
+
+# Supabase temp
+supabase/.temp/
