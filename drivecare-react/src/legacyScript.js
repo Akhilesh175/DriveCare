@@ -985,7 +985,6 @@ function _vsModelChips(brand,category,selected){
     h+=`<div class="vs-model-chip ${active}" onclick="vsSelModel('${safe}')">${m}</div>`;
   });
   h+='</div>';
-  console.log('[VS models]',brand,category,'→',models);
   return h;
 }
 
@@ -1119,9 +1118,7 @@ function renderModels(){
   const container=document.getElementById('modelContainer');
   if(!container)return;
   const {selectedBrand,selectedCategory,selectedModel}=VS;
-  console.log('[renderModels]',selectedBrand,selectedCategory);
   const models=(VS_MODELS[selectedBrand]&&VS_MODELS[selectedBrand][selectedCategory])||['Other'];
-  console.log('[renderModels] →',models);
   container.innerHTML='';
   models.forEach(m=>{
     const chip=document.createElement('div');
@@ -1953,7 +1950,11 @@ function startTracking(){
   // ETA countdown
   clearInterval(S.etaTrkTimer);
   S.etaTrkTimer=setInterval(()=>{
-    if(S.etaVal>0){S.etaVal--;document.getElementById('etaNum').textContent=String(S.etaVal).padStart(2,'0');document.getElementById('trkEtaLbl').textContent=String(S.etaVal).padStart(2,'0')+' min';}
+    if(S.etaVal>0){
+      S.etaVal--;
+      const eN = document.getElementById('etaNum'); if (eN) eN.textContent=String(S.etaVal).padStart(2,'0');
+      const eT = document.getElementById('trkEtaLbl'); if (eT) eT.textContent=String(S.etaVal).padStart(2,'0')+' min';
+    }
     else clearInterval(S.etaTrkTimer);
   },3200);
   // Device GPS for user's own position (continuous)
@@ -1961,7 +1962,8 @@ function startTracking(){
     S.gpsWatcher=navigator.geolocation.watchPosition(pos=>{
       S.userLat=pos.coords.latitude;S.userLng=pos.coords.longitude;
       S.userLocStr='Lat: '+S.userLat.toFixed(4)+' · Lng: '+S.userLng.toFixed(4);
-      document.getElementById('trkUserLoc').textContent=S.userLocStr;
+      const el = document.getElementById('trkUserLoc');
+      if (el) el.textContent=S.userLocStr;
       drawMap();
     },()=>{},{enableHighAccuracy:true,maximumAge:5000});
   }
