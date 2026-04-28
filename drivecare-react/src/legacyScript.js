@@ -1612,23 +1612,24 @@ function proceed(){
 // Core: set up tracking state and navigate. paymentDone=false for pay-later.
 // DOM population is handled by _restoreTrackingUI() from Tracking.jsx's useEffect.
 function proceedToTracking(paymentDone){
+  if(!S.user) S.user = { name: 'Guest User', phone: '0000000000', history: [] };
   if(!S.user.history)S.user.history=[];
   const jobId='JOB-USR-'+Date.now();
   S.activeJobId=jobId;
   // The shared flag is keyed on the MECHANIC's mechId — mechAccept writes it, we poll it
-  S.activeMechId=S.mech.id;
+  S.activeMechId=S.mech?.id;
   S.paymentDone=paymentDone;
   S.user.history.unshift({
     jobId,
     service:S.service,serviceIcon:S.serviceIcon,vehicle:S.vehicle,
-    mechName:S.mech.name,mechId:S.mech.id,price:S.servicePrice,
+    mechName:S.mech?.name || 'Unknown',mechId:S.mech?.id,price:S.servicePrice,
     status:'done',date:Date.now(),
     payMethod: paymentDone ? S.payMethod : 'pending',
     payTiming: S.payTiming
   });
   // Only credit mechanic now if paid upfront
-  if(paymentDone){
-    creditMechanic(S.mech.id,S.service,S.serviceIcon,S.vehicle,(S.user.name||'User'),S.servicePrice,Math.round(parseInt(S.servicePrice.replace('₹',''))*(1-S.commRate)));
+  if(paymentDone && S.mech?.id){
+    creditMechanic(S.mech.id,S.service,S.serviceIcon,S.vehicle,(S.user.name||'User'),S.servicePrice,Math.round(parseInt((S.servicePrice||'0').replace('₹',''))*(1-S.commRate)));
   }
   // Generate OTP 1 (OTP 2 is generated later when work starts)
   const otp1 = Math.floor(1000 + Math.random() * 9000).toString();
@@ -1636,12 +1637,13 @@ function proceedToTracking(paymentDone){
 
   // Ensure the shared flag exists for this mechanic (mechAccept also writes this;
   // whichever runs first just sets complete:false — the mechanic's write wins on accept)
-  const existingFlag=DB.get('svcComplete_mech_'+S.mech.id);
+  const mechIdForFlag = S.mech?.id || 'unknown_mech';
+  const existingFlag=DB.get('svcComplete_mech_'+mechIdForFlag);
   if(!existingFlag||existingFlag.complete){
-    DB.set('svcComplete_mech_'+S.mech.id,{
+    DB.set('svcComplete_mech_'+mechIdForFlag,{
       complete:false, 
       jobId, 
-      mechId:S.mech.id, 
+      mechId:mechIdForFlag, 
       ts:Date.now(),
       otp1,
       otp2: null, // Generated later
@@ -1667,7 +1669,7 @@ function proceedToTracking(paymentDone){
     price: S.servicePrice,
     vehNum: VS.vehicleNumber || '',
     status: 'pending',
-    targetMechId: S.mech.id,
+    targetMechId: mechIdForFlag,
     otp1,
     otp2: null,
     otpExpiry,
