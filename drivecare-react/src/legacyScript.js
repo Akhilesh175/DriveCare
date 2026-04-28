@@ -1616,9 +1616,7 @@ function proceedToTracking(paymentDone){
     });
   }
 
-  // ── BROADCAST: Add to global active_requests so it shows on Mechanic Portal ──
-  const liveReqs = DB.get('active_requests') || [];
-  // Build a request object compatible with renderMechRequests
+  // ── BROADCAST: Add to Supabase (with localStorage fallback) ──
   const newLiveReq = {
     id: jobId,
     brand: VS.selectedBrand,
@@ -1628,15 +1626,26 @@ function proceedToTracking(paymentDone){
     model: VS.selectedModel,
     user: S.user.name || 'User',
     phone: S.user.phone,
-    dist: '1.2 km', // simulated
-    eta: '8', // simulated
+    dist: '1.2 km',
+    eta: '8',
     price: S.servicePrice,
     vehNum: VS.vehicleNumber || '',
-    ts: Date.now(),
-    targetMechId: S.mech.id // Keep it targeted if the user selected a specific mechanic
+    status: 'pending',
+    targetMechId: S.mech.id,
+    ts: Date.now()
   };
+
+  // 1. Try Supabase
+  if (window.supabase && typeof window.supabase.from === 'function') {
+    window.supabase.from('service_requests').insert([newLiveReq]).then(({ error }) => {
+      if (error) console.error('Supabase broadcast error:', error);
+    });
+  }
+
+  // 2. Local fallback (for same-browser testing or if Supabase not configured)
+  const liveReqs = DB.get('active_requests') || [];
   liveReqs.unshift(newLiveReq);
-  DB.set('active_requests', liveReqs.slice(0, 50)); // Keep last 50
+  DB.set('active_requests', liveReqs.slice(0, 50));
   S.svcCompletedByMech=false;
   S.etaVal=parseInt(S.mech.eta)||8;
   saveUser();
@@ -2167,10 +2176,33 @@ function renderMechRequests(){
     return;
   }
 
-  // Fetch LIVE requests from DB (broadcast + targeted)
-  const liveReqs = (DB.get('active_requests') || []).filter(r => {
-    // Only show if not accepted yet (we'll remove it on accept)
-    // and if it's either broadcast OR targeted specifically to this mechanic
+  // Fetch LIVE requests from Supabase (or fallback to localStorage)
+  if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
+    window.supabase
+      .from('service_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('ts', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('Supabase fetch error:', error);
+          _renderRequestsInternal(DB.get('active_requests') || []);
+        } else {
+          _renderRequestsInternal(data || []);
+        }
+      });
+  } else {
+    // Fallback to localStorage
+    const liveReqs = (DB.get('active_requests') || []).filter(r => !r.accepted);
+    _renderRequestsInternal(liveReqs);
+  }
+}
+
+function _renderRequestsInternal(liveReqs) {
+  const list=document.getElementById('mechReqList'); if(!list) return;
+
+  // Filter for the current mechanic
+  const filteredLive = liveReqs.filter(r => {
     return !r.accepted && (!r.targetMechId || r.targetMechId === S.user.mechId);
   });
 
@@ -2291,7 +2323,15 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId){
   const mechId=S.user.mechId||'unknown';
   DB.set('svcComplete_mech_'+mechId,{complete:false,jobId,mechId,service,vehicle,userName,price,brandId,ts:Date.now()});
   
-  // ── Remove from live requests so others don't see it ──
+  // ── Mark as accepted in Supabase ──
+  if (window.supabase && typeof window.supabase.from === 'function') {
+    window.supabase
+      .from('service_requests')
+      .update({ status: 'accepted', targetMechId: mechId })
+      .eq('id', reqId);
+  }
+
+  // ── Remove from live requests (local fallback) ──
   const liveReqs = (DB.get('active_requests') || []).filter(r => r.id !== reqId);
   DB.set('active_requests', liveReqs);
 

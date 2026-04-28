@@ -11,19 +11,37 @@ try {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey)
   } else {
     console.warn('Supabase URL is missing or invalid. Admin features will be disabled.');
-    // Provide a dummy object to prevent "Cannot read properties of undefined (reading 'from')"
+    // Provide a dummy object to prevent "Cannot read properties of undefined"
     const dummy = {
-      eq: () => dummy,
+      from: () => dummy,
       select: () => dummy,
+      insert: () => Promise.resolve({ data: [], error: null }),
+      update: () => dummy,
+      delete: () => dummy,
+      eq: () => dummy,
+      neq: () => dummy,
+      gt: () => dummy,
+      lt: () => dummy,
+      order: () => dummy,
+      limit: () => dummy,
       single: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }),
-      from: () => dummy
+      on: () => dummy,
+      subscribe: () => dummy,
+      isDummy: true
     };
     supabaseInstance = dummy;
 
   }
 } catch (e) {
   console.error('Failed to initialize Supabase:', e);
-  supabaseInstance = { from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: e }) }) }) }) };
+  supabaseInstance = { 
+    from: () => ({ select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: e }) }) }) }),
+    isDummy: true
+  };
+}
+
+if (supabaseInstance && !supabaseInstance.isDummy) {
+  supabaseInstance.isDummy = false;
 }
 
 export const supabase = supabaseInstance;
