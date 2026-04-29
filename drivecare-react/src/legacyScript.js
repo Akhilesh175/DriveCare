@@ -2056,14 +2056,16 @@ function startSvcCompletePoller(){
       window.supabase.from('service_requests').select('*').eq('id', S.activeJobId).single().then(({ data, error }) => {
         if (data && !error) {
           // Sync Supabase progress back to local storage so the UI stops relying on stale data
-          if (localRec) {
-            if (data.otp1Verified) localRec.otp1Verified = true;
-            if (data.otp2) localRec.otp2 = data.otp2;
-            if (data.otp2Revealed) localRec.otp2Revealed = true;
-            if (data.status === 'completed' || data.complete) localRec.complete = true;
-            DB.set('svcComplete_mech_'+S.activeMechId, localRec);
-          }
-          _handlePolledRecord(data);
+          if (!localRec) localRec = {};
+          if (data.otp1Verified) localRec.otp1Verified = true;
+          if (data.otp2) localRec.otp2 = data.otp2;
+          if (data.otp2Revealed) localRec.otp2Revealed = true;
+          if (data.status === 'completed' || data.complete) localRec.complete = true;
+          DB.set('svcComplete_mech_'+S.activeMechId, localRec);
+          
+          // ALWAYS pass localRec (which contains the most advanced/optimistic state)
+          // instead of `data` directly, otherwise stale cloud reads will cause the UI to blink
+          _handlePolledRecord(localRec);
         }
       });
     }
@@ -2530,10 +2532,11 @@ function renderMechSvcComplete(){
   } else {
     // State 3: Success
     contentHtml = `
-      <div class="success-msg-box">
+      <div class="success-msg-box" style="margin-bottom:20px;">
          <strong>✓ You have marked this service complete.</strong>
          <p>The user can now confirm and rate the service.</p>
       </div>
+      <button onclick="mechClearActiveJobAndGoHome()" class="btn-complete" style="background:var(--acc);">🏠 RETURN TO DASHBOARD</button>
     `;
   }
 
@@ -2661,6 +2664,15 @@ function mechVerifyOtp2() {
   toast('✅ Service Complete');
   renderMechSvcComplete();
 }
+
+window.mechClearActiveJobAndGoHome = function() {
+  const mid = S.user?.mechId || S.activeMechId;
+  DB.del('svcComplete_mech_' + mid);
+  S.activeJobId = null;
+  S.activeJob = null;
+  S.svcCompletedByMech = false;
+  refreshMechDash();
+};
 
 // ── RENDER FUNCTIONS ──
 function renderUserHistory(){
