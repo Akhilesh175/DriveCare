@@ -2160,7 +2160,11 @@ function renderUserOtpState(rec = null) {
     }
   }
 
-  panel.innerHTML = html;
+  // Prevent UI flickering by only updating the DOM if the HTML actually changed
+  if (panel._lastHtml !== html) {
+    panel.innerHTML = html;
+    panel._lastHtml = html;
+  }
 }
 
 function revealFinalOtp() {
