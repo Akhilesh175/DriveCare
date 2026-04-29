@@ -2042,20 +2042,27 @@ function startSvcCompletePoller(){
   clearInterval(S._svcPollTimer);
   S._svcPollTimer=setInterval(()=>{
     if(!S.activeJobId) return;
-
-    // 1. ALWAYS check localStorage first (guaranteed to work on same device)
+    // 1. Check localStorage first for immediate UI rendering
+    let localRec = null;
     if(S.activeMechId){
-      const localRec=DB.get('svcComplete_mech_'+S.activeMechId);
+      localRec=DB.get('svcComplete_mech_'+S.activeMechId);
       if(localRec && (localRec.jobId===S.activeJobId || localRec.id===S.activeJobId)){
         _handlePolledRecord(localRec);
-        return; // Local record found and handled
       }
     }
 
-    // 2. Also try Supabase for cross-device sync (if local record wasn't found)
+    // 2. ALWAYS poll Supabase for cross-device sync updates
     if (window.supabase && typeof window.supabase.from === 'function' && !window.supabase.isDummy) {
       window.supabase.from('service_requests').select('*').eq('id', S.activeJobId).single().then(({ data, error }) => {
         if (data && !error) {
+          // Sync Supabase progress back to local storage so the UI stops relying on stale data
+          if (localRec) {
+            if (data.otp1Verified) localRec.otp1Verified = true;
+            if (data.otp2) localRec.otp2 = data.otp2;
+            if (data.otp2Revealed) localRec.otp2Revealed = true;
+            if (data.status === 'completed' || data.complete) localRec.complete = true;
+            DB.set('svcComplete_mech_'+S.activeMechId, localRec);
+          }
           _handlePolledRecord(data);
         }
       });
@@ -2605,7 +2612,10 @@ function mechVerifyOtp1() {
   if (window.supabase && typeof window.supabase.from === 'function') {
     window.supabase.from('service_requests')
       .update({ otp1Verified: true, otp2: otp2, status: 'in_progress' })
-      .eq('id', rec.jobId || S.activeJob?.jobId);
+      .eq('id', rec.jobId || S.activeJob?.jobId)
+      .then(({ error }) => {
+        if (error) console.error('Supabase OTP1 update error:', error);
+      });
   }
 
   toast('✅ Work Started');
