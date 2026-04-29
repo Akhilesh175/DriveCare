@@ -2193,7 +2193,8 @@ function revealFinalOtp() {
     if (window.supabase && typeof window.supabase.from === 'function') {
       window.supabase.from('service_requests')
         .update({ otp2Revealed: true })
-        .eq('id', S.activeJobId);
+        .eq('id', S.activeJobId)
+        .then(({ error }) => { if(error) console.error(error); });
     }
 
     renderUserOtpState(rec);
@@ -2469,7 +2470,8 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,
     window.supabase
       .from('service_requests')
       .update({ status: 'accepted', targetMechId: mechId })
-      .eq('id', reqId);
+      .eq('id', reqId)
+      .then(({ error }) => { if(error) console.error(error); });
   }
 
   // ── Remove from live requests (local fallback) ──
@@ -2661,7 +2663,8 @@ function mechVerifyOtp2() {
   if (window.supabase && typeof window.supabase.from === 'function') {
     window.supabase.from('service_requests')
       .update({ complete: true, status: 'completed' })
-      .eq('id', rec.jobId || S.activeJob?.jobId);
+      .eq('id', rec.jobId || S.activeJob?.jobId)
+      .then(({ error }) => { if(error) console.error(error); });
   }
 
   S.svcCompletedByMech = true;
