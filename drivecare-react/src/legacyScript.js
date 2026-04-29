@@ -2423,7 +2423,9 @@ function mechAccept(reqId,service,icon,vehicle,userName,price,brandId,otp1,otp2,
   // ── MERGE with existing record to preserve user-generated OTPs ──
   // The user writes otp1/otp2/otpExpiry into this key in proceedToTracking.
   // Overwriting those values would break OTP verification.
-  const existingRec = DB.get('svcComplete_mech_'+mechId) || {};
+  const existingRecRaw = DB.get('svcComplete_mech_'+mechId) || {};
+  const existingRec = existingRecRaw.jobId === jobId ? existingRecRaw : {};
+  
   DB.set('svcComplete_mech_'+mechId, {
     ...existingRec,
     complete: false,
