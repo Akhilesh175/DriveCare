@@ -1825,7 +1825,7 @@ function drawMap(){
   for(let y=0;y<H;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
   // Roads (simulated streets)
   c.strokeStyle='#2a3a52';c.lineWidth=8;c.lineCap='round';
-  const roads=[[0,H/2,W,H/2],[W/2,0,W/2,H],[0,H*0.3,W,H*0.3],[0,H*0.7,W,H*0.7]];
+  const roads=[[0,H/2,W,H/2],[W/2,0,W/2,H],[0,H*0.3,W,H*0.3],[0,H*0.7,W,H*0.7],[W*0.33,0,W*0.33,H],[W*0.66,0,W*0.66,H]];
   roads.forEach(r=>{c.beginPath();c.moveTo(r[0],r[1]);c.lineTo(r[2],r[3]);c.stroke();});
   // City blocks
   c.fillStyle='#1e2d3e';[[0,0,W*0.45,H*0.27],[W*0.55,0,W,H*0.27],[0,H*0.33,W*0.45,H*0.65],[W*0.55,H*0.33,W,H*0.65],[0,H*0.73,W*0.45,H],[W*0.55,H*0.73,W,H]].forEach(b=>{c.fillRect(b[0],b[1],b[2]-b[0],b[3]-b[1]);});
@@ -1853,7 +1853,19 @@ function drawMap(){
   c.fillStyle=mc;roundRect(c,mxy.x-14,mxy.y-14,28,28,8);c.fill();
   c.strokeStyle='#fff';c.lineWidth=2;roundRect(c,mxy.x-14,mxy.y-14,28,28,8);c.stroke();
   c.font='14px sans-serif';c.textAlign='center';c.fillText('🔧',mxy.x,mxy.y+6);
-  c.fillStyle='rgba(148,148,160,0.9)';c.font='9px DM Mono, monospace';c.fillText(S.mech.name.split(' ')[0].toUpperCase(),mxy.x,mxy.y+28);
+
+  // Mechanic Name Label (Safe check)
+  const rawName = (S.mech && S.mech.name) ? S.mech.name : (S.activeJob && S.activeJob.mechName) ? S.activeJob.mechName : 'MECHANIC';
+  const mechName = rawName.split(' ')[0].toUpperCase();
+  
+  c.fillStyle='rgba(0,0,0,0.6)';
+  c.font='9px DM Mono, monospace';
+  const txtWidth = c.measureText(mechName).width;
+  roundRect(c, mxy.x - (txtWidth/2) - 4, mxy.y + 20, txtWidth + 8, 12, 4);
+  c.fill();
+  
+  c.fillStyle='#fff';
+  c.fillText(mechName, mxy.x, mxy.y + 29);
   // Update coord display
   const trkCoordEl=document.getElementById('trkCoord');
   if(trkCoordEl)trkCoordEl.textContent='Lat:'+S.mechMarkerLat.toFixed(4)+' Lng:'+S.mechMarkerLng.toFixed(4);
@@ -2061,7 +2073,20 @@ function startSvcCompletePoller(){
           if (data.otp2) localRec.otp2 = data.otp2;
           if (data.otp2Revealed) localRec.otp2Revealed = true;
           if (data.status === 'completed' || data.complete) localRec.complete = true;
-          DB.set('svcComplete_mech_'+S.activeMechId, localRec);
+          
+          // Auto-populate S.mech if we have a targetMechId from Supabase but no name locally
+          if (data.targetMechId && (!S.mech || !S.mech.name || S.mech.id !== data.targetMechId)) {
+            window.supabase.from('profiles').select('name').eq('mechId', data.targetMechId).single().then(({data: mData}) => {
+              if (mData && mData.name) {
+                if (!S.mech) S.mech = {};
+                S.mech.id = data.targetMechId;
+                S.mech.name = mData.name;
+                S.activeMechId = data.targetMechId;
+              }
+            });
+          }
+
+          DB.set('svcComplete_mech_'+(S.activeMechId || data.targetMechId), localRec);
           
           // ALWAYS pass localRec (which contains the most advanced/optimistic state)
           // instead of `data` directly, otherwise stale cloud reads will cause the UI to blink
