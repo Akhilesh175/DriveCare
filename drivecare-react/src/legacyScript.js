@@ -2080,13 +2080,7 @@ function _handlePolledRecord(rec) {
         // Fallback in case mechanic somehow forced completion without OTP
         toast('🔧 Service complete! Please pay to confirm.');
       } else {
-        toast('🔧 Mechanic has completed the service!');
-        // Auto-redirect user to the rating/review screen
-        setTimeout(() => {
-          if (typeof window.finishJob === 'function') {
-            window.finishJob();
-          }
-        }, 1500);
+        toast('🔧 Mechanic has completed the service! You can now confirm.');
       }
     }
   }
