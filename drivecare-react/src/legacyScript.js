@@ -2080,7 +2080,13 @@ function _handlePolledRecord(rec) {
         // Fallback in case mechanic somehow forced completion without OTP
         toast('🔧 Service complete! Please pay to confirm.');
       } else {
-        toast('🔧 Mechanic has completed the service! You can now confirm.');
+        toast('🔧 Mechanic has completed the service!');
+        // Auto-redirect user to the rating/review screen
+        setTimeout(() => {
+          if (typeof window.finishJob === 'function') {
+            window.finishJob();
+          }
+        }, 1500);
       }
     }
   }
@@ -2659,10 +2665,20 @@ function mechVerifyOtp2() {
   }
 
   S.svcCompletedByMech = true;
-  if(S.user&&S.user.history){const h=S.user.history.find(x=>x.jobId===S.activeJob.jobId);if(h)h.mechComplete=true;}
+  if(S.user && S.user.history && S.activeJob && S.activeJob.jobId){
+    const h=S.user.history.find(x=>x.jobId===S.activeJob.jobId);
+    if(h) h.mechComplete=true;
+  }
   saveUser();
   toast('✅ Service Complete');
   renderMechSvcComplete();
+  
+  // Auto-redirect mechanic to dashboard
+  setTimeout(() => {
+    if (typeof window.mechClearActiveJobAndGoHome === 'function') {
+      window.mechClearActiveJobAndGoHome();
+    }
+  }, 2500);
 }
 
 window.mechClearActiveJobAndGoHome = function() {
@@ -2671,7 +2687,12 @@ window.mechClearActiveJobAndGoHome = function() {
   S.activeJobId = null;
   S.activeJob = null;
   S.svcCompletedByMech = false;
-  refreshMechDash();
+  
+  if (window.reactNavigate) {
+    window.reactNavigate('mechHome');
+  } else {
+    refreshMechDash();
+  }
 };
 
 // ── RENDER FUNCTIONS ──
