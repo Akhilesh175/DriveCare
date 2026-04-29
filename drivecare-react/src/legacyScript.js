@@ -2677,13 +2677,6 @@ function mechVerifyOtp2() {
   saveUser();
   toast('✅ Service Complete');
   renderMechSvcComplete();
-  
-  // Auto-redirect mechanic to dashboard
-  setTimeout(() => {
-    if (typeof window.mechClearActiveJobAndGoHome === 'function') {
-      window.mechClearActiveJobAndGoHome();
-    }
-  }, 2500);
 }
 
 window.mechClearActiveJobAndGoHome = function() {
