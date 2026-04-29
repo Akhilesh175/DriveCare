@@ -1764,7 +1764,14 @@ function finalisePostPayment(method){
   // Hide payment panel and unlock completion
   const pp=document.getElementById('postPayPanel');if(pp)pp.style.display='none';
   toast('✅ Payment of ₹'+amt+' confirmed!');
-  renderUserOtpState();
+  
+  // If OTP2 hasn't been revealed yet, reveal it now automatically
+  const rec = DB.get('svcComplete_mech_' + S.activeMechId);
+  if (rec && rec.otp1Verified && !rec.otp2Revealed) {
+    revealFinalOtp();
+  } else {
+    renderUserOtpState();
+  }
 }
 function creditMechanic(mechId,service,icon,vehicle,userName,price,net){
   const users=DB.get('users')||{};const mech=Object.values(users).find(u=>u.mechId===mechId);if(!mech)return;
@@ -2061,7 +2068,7 @@ function _handlePolledRecord(rec) {
     if (!S.svcCompletedByMech) {
       S.svcCompletedByMech = true;
       if (S.payTiming === 'after' && !S.paymentDone) {
-        renderPostPayPanel();
+        // Fallback in case mechanic somehow forced completion without OTP
         toast('🔧 Service complete! Please pay to confirm.');
       } else {
         toast('🔧 Mechanic has completed the service! You can now confirm.');
@@ -2098,16 +2105,29 @@ function renderUserOtpState(rec = null) {
       </div>
     `;
   } else if (!rec.otp2Revealed) {
-    html = `
-      <div style="background:var(--bg3); border:1.5px solid var(--grn); border-radius:var(--r); padding:16px; text-align:center; margin-bottom:15px;">
-        <div style="font-size:24px; margin-bottom:10px;">🛠️</div>
-        <div style="font-size:16px; font-weight:600; color:var(--grn); margin-bottom:5px;">Work in Progress</div>
-        <div style="font-size:13px; opacity:0.8;">The mechanic has started the service.</div>
-      </div>
-      <div class="cta-bar">
-        <button class="btn" style="background:var(--acc); color:#fff;" onclick="revealFinalOtp()">Verify Service & Reveal Final OTP</button>
-      </div>
-    `;
+    if (S.payTiming === 'after' && !S.paymentDone) {
+      html = `
+        <div style="background:var(--bg3); border:1.5px solid var(--grn); border-radius:var(--r); padding:16px; text-align:center; margin-bottom:15px;">
+          <div style="font-size:24px; margin-bottom:10px;">🛠️</div>
+          <div style="font-size:16px; font-weight:600; color:var(--grn); margin-bottom:5px;">Work in Progress</div>
+          <div style="font-size:13px; opacity:0.8;">The mechanic is working on your vehicle.</div>
+        </div>
+        <div class="cta-bar">
+          <button class="btn" style="background:var(--org); color:#fff;" onclick="renderPostPayPanel()">💳 Pay Now to Reveal Final OTP</button>
+        </div>
+      `;
+    } else {
+      html = `
+        <div style="background:var(--bg3); border:1.5px solid var(--grn); border-radius:var(--r); padding:16px; text-align:center; margin-bottom:15px;">
+          <div style="font-size:24px; margin-bottom:10px;">🛠️</div>
+          <div style="font-size:16px; font-weight:600; color:var(--grn); margin-bottom:5px;">Work in Progress</div>
+          <div style="font-size:13px; opacity:0.8;">The mechanic has started the service.</div>
+        </div>
+        <div class="cta-bar">
+          <button class="btn" style="background:var(--acc); color:#fff;" onclick="revealFinalOtp()">Verify Service & Reveal Final OTP</button>
+        </div>
+      `;
+    }
   } else if (!rec.complete) {
     html = `
       <div style="background:var(--bg3); border:1.5px solid var(--org); border-radius:var(--r); padding:16px; text-align:center; margin-bottom:15px;">
