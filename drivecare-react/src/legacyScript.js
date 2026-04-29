@@ -2321,11 +2321,11 @@ function _renderRequestsInternal(liveReqs) {
 
   // All possible simulated requests, each tagged with a brand id
   const MOCK_REQS=[
-    {id:'R-T1', brand:'tata',     service:'Puncture repair',  icon:'🔩', category:'Car',    model:'Nexon',       user:'Arjun Sharma',  dist:'0.9 km', eta:'6',  price:'₹199', vehNum:'MH 12 AB 1234'},
-    {id:'R-T2', brand:'tata',     service:'Battery dead',     icon:'🔋', category:'SUV',    model:'Harrier',     user:'Sunita Rao',    dist:'1.8 km', eta:'12', price:'₹349'},
-    {id:'R-T3', brand:'tata',     service:'Engine issue',     icon:'🔧', category:'Truck',  model:'Prima',       user:'Baldev Singh',  dist:'3.2 km', eta:'21', price:'₹799', vehNum:'MH 14 XY 9876'},
-    {id:'R-M1', brand:'mahindra', service:'Puncture repair',  icon:'🔩', category:'SUV',    model:'Scorpio',     user:'Priya Verma',   dist:'1.1 km', eta:'8',  price:'₹249'},
-    {id:'R-M2', brand:'mahindra', service:'Engine issue',     icon:'🔧', category:'Tractor',model:'265 DI',      user:'Ramprasad',     dist:'2.5 km', eta:'17', price:'₹699'},
+    {id:'R-T1', brand:'tata',     service:'Puncture repair',  icon:'🔩', category:'Car',    model:'Nexon',       user:'Arjun Sharma',  dist:'0.9 km', eta:'6',  price:'₹199', vehNum:'MH 12 AB 1234', phone:'+91 98220 11223', lat:19.0760, lng:72.8777},
+    {id:'R-T2', brand:'tata',     service:'Battery dead',     icon:'🔋', category:'SUV',    model:'Harrier',     user:'Sunita Rao',    dist:'1.8 km', eta:'12', price:'₹349', phone:'+91 91234 56789', lat:19.0800, lng:72.8800},
+    {id:'R-T3', brand:'tata',     service:'Engine issue',     icon:'🔧', category:'Truck',  model:'Prima',       user:'Baldev Singh',  dist:'3.2 km', eta:'21', price:'₹799', vehNum:'MH 14 XY 9876', phone:'+91 88888 77777', lat:19.0900, lng:72.8900},
+    {id:'R-M1', brand:'mahindra', service:'Puncture repair',  icon:'🔩', category:'SUV',    model:'Scorpio',     user:'Priya Verma',   dist:'1.1 km', eta:'8',  price:'₹249', phone:'+91 77777 66666', lat:19.1000, lng:72.9000},
+    {id:'R-M2', brand:'mahindra', service:'Engine issue',     icon:'🔧', category:'Tractor',model:'265 DI',      user:'Ramprasad',     dist:'2.5 km', eta:'17', price:'₹699', phone:'+91 66666 55555', lat:19.1100, lng:72.9100},
     {id:'R-M3', brand:'mahindra', service:'Out of fuel',      icon:'⛽', category:'SUV',    model:'Thar',        user:'Kavita Joshi',  dist:'1.4 km', eta:'10', price:'₹199', vehNum:'KA 01 CD 5678'},
     {id:'R-H1', brand:'hyundai',  service:'AC issue',         icon:'❄️', category:'SUV',    model:'Creta',       user:'Rajiv Gupta',   dist:'2.0 km', eta:'14', price:'₹699'},
     {id:'R-H2', brand:'hyundai',  service:'Puncture repair',  icon:'🔩', category:'Car',    model:'i20',         user:'Meena Iyer',    dist:'0.7 km', eta:'5',  price:'₹199', vehNum:'DL 4C AB 1122'},
@@ -2402,8 +2402,16 @@ function _renderRequestsInternal(liveReqs) {
               <span style="opacity:.6;">👤</span> <b>${r.user}</b>
             </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span style="opacity:.6;">📞</span> <a href="tel:${r.phone||''}" style="color:inherit;text-decoration:none;">${r.phone || 'N/A'}</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
               <span style="opacity:.6;">📍</span> ${r.dist} away · ETA ~${r.eta} min
             </div>
+            ${(r.lat || r.lng) ? `
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px;opacity:0.6;">
+              <span style="opacity:.6;">🛰️</span> Lat: ${r.lat?Number(r.lat).toFixed(4):'?'}, Lng: ${r.lng?Number(r.lng).toFixed(4):'?'}
+            </div>
+            ` : ''}
             <div style="display:flex;align-items:center;gap:6px;">
               <span style="opacity:.6;">💰</span> ${r.price} <span style="color:var(--tx3);opacity:.6;">(you earn ₹${earn})</span>
             </div>
